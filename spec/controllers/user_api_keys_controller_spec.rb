@@ -66,6 +66,19 @@ TXT
       expect(response.code).to eq("403")
     end
 
+    it "will allow tokens for staff without TL" do
+
+      SiteSetting.min_trust_level_for_user_api_key = 2
+      SiteSetting.allowed_user_api_auth_redirects = args[:auth_redirect]
+
+      user = Fabricate(:user, trust_level: 1, moderator: true)
+
+      log_in_user(user)
+
+      post :create, args
+      expect(response.code).to eq("302")
+    end
+
     it "will not create token unless TL is met" do
       SiteSetting.min_trust_level_for_user_api_key = 2
       SiteSetting.allowed_user_api_auth_redirects = args[:auth_redirect]
@@ -92,6 +105,38 @@ TXT
       post :create, args
       expect(response.code).to eq("403")
 
+    end
+
+    it "allows for a revoke with no id" do
+      key = Fabricate(:readonly_user_api_key)
+      request.env['HTTP_USER_API_KEY'] = key.key
+      post :revoke
+
+      expect(response.status).to eq(200)
+
+      key.reload
+      expect(key.revoked_at).not_to eq(nil)
+    end
+
+    it "will not allow readonly api keys to revoke others" do
+      key1 = Fabricate(:readonly_user_api_key)
+      key2 = Fabricate(:readonly_user_api_key)
+
+      request.env['HTTP_USER_API_KEY'] = key1.key
+      post :revoke, id: key2.id
+
+      expect(response.status).to eq(403)
+    end
+
+    it "will allow readonly api keys to revoke self" do
+      key = Fabricate(:readonly_user_api_key)
+      request.env['HTTP_USER_API_KEY'] = key.key
+      post :revoke, id: key.id
+
+      expect(response.status).to eq(200)
+
+      key.reload
+      expect(key.revoked_at).not_to eq(nil)
     end
 
     it "will not return p access if not yet configured" do
