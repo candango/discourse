@@ -1,27 +1,10 @@
 class GroupsController < ApplicationController
 
-  before_filter :ensure_logged_in, only: [:set_notifications]
+  before_filter :ensure_logged_in, only: [:set_notifications, :mentionable]
   skip_before_filter :preload_json, :check_xhr, only: [:posts_feed, :mentions_feed]
 
   def show
-    render_serialized(find_group(:id), BasicGroupSerializer)
-  end
-
-  def counts
-    group = find_group(:group_id)
-
-    counts = {
-      posts: group.posts_for(guardian).count,
-      topics: group.posts_for(guardian).where(post_number: 1).count,
-      mentions: group.mentioned_posts_for(guardian).count,
-      members: group.users.count,
-    }
-
-    if guardian.can_see_group_messages?(group)
-      counts[:messages] = group.messages_for(guardian).where(post_number: 1).count
-    end
-
-    render json: { counts: counts }
+    render_serialized(find_group(:id), GroupShowSerializer, root: 'basic_group')
   end
 
   def posts
@@ -120,6 +103,16 @@ class GroupsController < ApplicationController
     end
   end
 
+  def mentionable
+    group = find_group(:name)
+
+    if group
+      render json: { mentionable: Group.mentionable(current_user).where(id: group.id).present? }
+    else
+      raise Discourse::InvalidAccess.new
+    end
+  end
+
   def remove_member
     group = Group.find(params[:id])
     guardian.ensure_can_edit!(group)
@@ -128,6 +121,8 @@ class GroupsController < ApplicationController
       user = User.find(params[:user_id])
     elsif params[:username].present?
       user = User.find_by_username(params[:username])
+    elsif params[:user_email].present?
+      user = User.find_by_email(params[:user_email])
     else
       raise Discourse::InvalidParameters.new('user_id or username must be present')
     end

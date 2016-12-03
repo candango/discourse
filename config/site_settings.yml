@@ -536,6 +536,11 @@ posting:
     default: ''
     refresh: true
     type: list
+  censored_pattern:
+    client: true
+    default: ''
+    refresh: true
+    type: regex
   enable_emoji:
     default: true
     client: true
@@ -548,6 +553,9 @@ posting:
   approve_post_count:
     default: 0
   approve_unless_trust_level:
+    default: 0
+    enum: 'TrustLevelSetting'
+  approve_new_topics_unless_trust_level:
     default: 0
     enum: 'TrustLevelSetting'
   notify_about_queued_posts_after:
@@ -564,6 +572,10 @@ posting:
      - code-fences
   embed_truncate:
     default: true
+  allowed_href_schemes:
+    client: true
+    default: ''
+    type: list
 
 email:
   email_time_window_mins:
@@ -572,7 +584,11 @@ email:
   private_email_time_window_seconds: 20
   email_posts_context: 5
   digest_min_excerpt_length: 100
-  digest_topics: 20
+  digest_topics:
+    default: 5
+    min: 1
+  digest_posts: 3
+  digest_other_topics: 5
   delete_digest_email_after_days: 365
   digest_suppress_categories:
     type: category_list
@@ -596,6 +612,7 @@ email:
     default: false
     validator: "POP3PollingEnabledSettingValidator"
   pop3_polling_ssl: true
+  pop3_polling_openssl_verify: true
   pop3_polling_period_mins: 5
   pop3_polling_host: ''
   pop3_polling_port: 995
@@ -653,11 +670,12 @@ email:
   reset_bounce_score_after_days: 30
   attachment_content_type_blacklist:
     type: list
-    default: "pkcs7"
+    default: "pkcs7|x-vcard"
   attachment_filename_blacklist:
     type: list
     default: "smime.p7s|signature.asc"
-
+  enable_forwarded_emails: false
+  always_show_trimmed_content: false
 
 files:
   max_image_size_kb:
@@ -848,9 +866,12 @@ security:
 onebox:
   enable_flash_video_onebox: false
   post_onebox_maxlength: 500
-  onebox_domains_whitelist:
+  onebox_domains_blacklist:
     default: ''
     type: list
+  max_oneboxes_per_post:
+    default: 50
+    client: true
 
 spam:
   add_rel_nofollow_to_user_content: true
@@ -912,6 +933,9 @@ rate_limits:
     client: true
     shadowed_by_global: true
     default: 0
+  max_prints_per_hour_per_user:
+    default: 5
+    client: true
 
 developer:
   force_hostname:
@@ -1223,6 +1247,7 @@ uncategorized:
 
   topic_page_title_includes_category: true
 
+
 user_preferences:
   default_email_digest_frequency:
     enum: 'DigestEmailSiteSetting'
@@ -1250,6 +1275,9 @@ user_preferences:
   default_other_auto_track_topics_after_msecs:
     enum: 'AutoTrackDurationSiteSetting'
     default: 240000
+  default_other_notification_level_when_replying:
+    enum: 'NotificationLevelWhenReplyingSiteSetting'
+    default: 2
   default_other_external_links_in_new_tab: false
   default_other_enable_quoting: true
   default_other_dynamic_favicon: false
@@ -1271,18 +1299,20 @@ user_preferences:
   default_categories_muted:
     type: category_list
     default: ''
+  default_categories_watching_first_post:
+    type: category_list
+    default: ''
 
 user_api:
   max_user_api_reqs_per_day:
     default: 2880
   max_user_api_reqs_per_minute:
     default: 20
-  allow_read_user_api_keys:
+  allow_user_api_keys:
     default: true
-  allow_write_user_api_keys:
-    default: true
-  allow_push_user_api_keys:
-    default: true
+  allow_user_api_key_scopes:
+    default: 'read|write|message_bus|push|notifications|session_info'
+    type: list
   max_api_keys_per_user:
     default: 10
   push_api_secret_key:

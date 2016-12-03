@@ -77,7 +77,7 @@ HTML
     end
 
     it "should inject nofollow in all user provided links" do
-      expect(PrettyText.cook('<a href="http://cnn.com">cnn</a>')).to match(/nofollow/)
+      expect(PrettyText.cook('<a href="http://cnn.com">cnn</a>')).to match(/nofollow noopener/)
     end
 
     it "should not inject nofollow in all local links" do
@@ -265,6 +265,11 @@ HTML
       expect(PrettyText.excerpt(emoji_image, 100, { keep_emoji_images: true })).to match_html(emoji_image)
     end
 
+    it "should have an option to remap emoji to code points" do
+      emoji_image = "I <img src='/images/emoji/emoji_one/heart.png?v=1' title=':heart:' class='emoji' alt=':heart:'> you <img src='/images/emoji/emoji_one/heart.png?v=1' title=':unknown:' class='emoji' alt=':unknown:'> "
+      expect(PrettyText.excerpt(emoji_image, 100, { remap_emoji: true })).to match_html("I ❤  you :unknown:")
+    end
+
     it "should have an option to preserve emoji codes" do
       emoji_code = "<img src='/images/emoji/emoji_one/heart.png?v=1' title=':heart:' class='emoji' alt=':heart:'>"
       expect(PrettyText.excerpt(emoji_code, 100)).to eq(":heart:")
@@ -430,6 +435,15 @@ HTML
     it "replaces the custom emoji" do
       Emoji.stubs(:custom).returns([ Emoji.create_from_path('trout') ])
       expect(PrettyText.cook("hello :trout:")).to match(/<img src[^>]+trout[^>]+>/)
+    end
+  end
+
+  describe "censored_pattern site setting" do
+    it "can be cleared if it causes cooking to timeout" do
+      SiteSetting.censored_pattern = "evilregex"
+      described_class.stubs(:markdown).raises(MiniRacer::ScriptTerminatedError)
+      PrettyText.cook("Protect against it plz.") rescue nil
+      expect(SiteSetting.censored_pattern).to be_blank
     end
   end
 
