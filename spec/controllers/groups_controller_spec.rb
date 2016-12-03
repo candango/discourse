@@ -25,19 +25,6 @@ describe GroupsController do
     end
   end
 
-  describe "counts" do
-    it "returns counts if it can be seen" do
-      xhr :get, :counts, group_id: group.name
-      expect(response).to be_success
-    end
-
-    it "returns no counts if it can not be seen" do
-      group.update_columns(visible: false)
-      xhr :get, :counts, group_id: group.name
-      expect(response).not_to be_success
-    end
-  end
-
   describe "posts" do
     it "ensures the group can be seen" do
       Guardian.any_instance.expects(:can_see?).with(group).returns(false)
@@ -200,19 +187,22 @@ describe GroupsController do
       end
 
       it "removes by id" do
-        xhr :delete, :remove_member, id: group.id, user_id: user.id
+        expect do
+          xhr :delete, :remove_member, id: group.id, user_id: user.id
 
-        expect(response).to be_success
-        group.reload
-        expect(group.users.count).to eq(0)
+          expect(response).to be_success
+          group.reload
+        end.to change{group.users.count}.from(1).to(0)
       end
 
       it "removes by username" do
-        xhr :delete, :remove_member, id: group.id, username: user.username
+        expect do
+          xhr :delete, :remove_member, id: group.id, username: user.username
 
-        expect(response).to be_success
-        group.reload
-        expect(group.users.count).to eq(0)
+          expect(response).to be_success
+          group.reload
+
+        end.to change{group.users.count}.from(1).to(0)
       end
 
       it "removes user.primary_group_id when user is removed from group" do
@@ -223,6 +213,14 @@ describe GroupsController do
 
         user.reload
         expect(user.primary_group_id).to eq(nil)
+      end
+
+      it "removes by user_email" do
+        expect do
+          xhr :delete, :remove_member, id: group.id, user_email: user.email
+          expect(response).to be_success
+          group.reload
+        end.to change{group.users.count}.from(1).to(0)
       end
     end
 

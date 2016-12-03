@@ -97,6 +97,7 @@ module Discourse
     set
   end
 
+
   def self.activate_plugins!
     all_plugins = Plugin::Instance.find_all("#{Rails.root}/plugins")
 
@@ -136,6 +137,14 @@ module Discourse
 
   def self.plugins
     @plugins ||= []
+  end
+
+  def self.official_plugins
+    plugins.find_all{|p| p.metadata.official?}
+  end
+
+  def self.unofficial_plugins
+    plugins.find_all{|p| !p.metadata.official?}
   end
 
   def self.assets_digest
@@ -219,10 +228,12 @@ module Discourse
 
   def self.keep_readonly_mode
     # extend the expiry by 1 minute every 30 seconds
-    Thread.new do
-      while readonly_mode?
-        $redis.expire(READONLY_MODE_KEY, READONLY_MODE_KEY_TTL)
-        sleep 30.seconds
+    unless Rails.env.test?
+      Thread.new do
+        while readonly_mode?
+          $redis.expire(READONLY_MODE_KEY, READONLY_MODE_KEY_TTL)
+          sleep 30.seconds
+        end
       end
     end
   end
@@ -328,6 +339,9 @@ module Discourse
 
     # in case v8 was initialized we want to make sure it is nil
     PrettyText.reset_context
+
+    Tilt::ES6ModuleTranspilerTemplate.reset_context if defined? Tilt::ES6ModuleTranspilerTemplate
+    JsLocaleHelper.reset_context if defined? JsLocaleHelper
     nil
   end
 
